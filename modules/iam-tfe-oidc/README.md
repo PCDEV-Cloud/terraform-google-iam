@@ -1,11 +1,8 @@
-# Google IAM Terraform module
+# Google Terraform Cloud/Enterprise OIDC Provider
 
-## Features
-1. Create identity providers with set of roles and permissions for external identities, e.g. Terraform Cloud/Enterprise.
+Terraform module which creates Workload Identity Pools, OIDC Providers and Service Accounts for Terraform Cloud/Enterprise projects and workspaces.
 
 ## Usage
-
-`iam-tfe-oidc`
 
 ```hcl
 module "iam-tfe-oidc" {
@@ -23,7 +20,6 @@ module "iam-tfe-oidc" {
   ]
 }
 ```
-
 ## Examples
 
 - [iam-tfe-oidc](https://github.com/PCDEV-Cloud/terraform-google-iam/tree/main/examples/iam-tfe-oidc) - Creates OIDC provider for Terraform Cloud/Enterprise
