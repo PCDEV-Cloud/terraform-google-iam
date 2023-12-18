@@ -4,7 +4,8 @@
 
 locals {
   list_of_identity_pools = flatten([for i in var.access_configuration : {
-    name         = lower("tfe-${i.organization}-${i.project}")
+    id           = lower(replace("tfe-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
   }])
@@ -15,9 +16,9 @@ locals {
 resource "google_iam_workload_identity_pool" "this" {
   for_each = local.identity_pools
 
-  workload_identity_pool_id = each.value["name"]
-  display_name              = each.value["name"]
-  description               = "Identity Pool for Terraform Cloud - Organization: ${each.value["organization"]}, Project: ${each.value["project"]}"
+  workload_identity_pool_id = each.value["id"]          # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name              = each.value["id"]          # Must be at most 32 characters long.
+  description               = each.value["description"] # Must be at most 256 characters long. (31+36+40)
   disabled                  = false
   project                   = var.project
 }
@@ -28,7 +29,8 @@ resource "google_iam_workload_identity_pool" "this" {
 
 locals {
   list_of_providers = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-    name         = lower("tfe-${j}")
+    id           = lower(replace("tfe-${j}", "/[\\s_]/", "-"))
+    description  = "TFE Workspace='${i.workspace}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
     workspace    = j
@@ -41,9 +43,9 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
   workload_identity_pool_id          = google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].workload_identity_pool_id
-  workload_identity_pool_provider_id = each.value["name"]
-  display_name                       = each.value["name"]
-  description                        = "Provider for Terraform Cloud - Workspace: ${each.value["workspace"]}"
+  workload_identity_pool_provider_id = each.value["id"]          # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name                       = each.value["id"]          # Must be at most 32 characters long.
+  description                        = each.value["description"] # Must be at most 256 characters long. (45+90+36+40)
   disabled                           = false
   project                            = var.project
 
@@ -59,6 +61,10 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   }
 
   attribute_condition = "'organization:${each.value["organization"]}:project:${each.value["project"]}:workspace:${each.value["workspace"]}' in assertion.sub"
+
+  depends_on = [
+    google_iam_workload_identity_pool.this
+  ]
 }
 
 ################################################################################
@@ -67,13 +73,15 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 
 locals {
   list_of_apply_service_accounts = flatten([for i in var.access_configuration : {
-    name         = lower("tfe-${i.organization}-${i.project}-apply-sa")
+    account_id   = lower(replace("tfe-apply-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
   }])
 
   list_of_plan_service_accounts = flatten([for i in var.access_configuration : {
-    name         = lower("tfe-${i.organization}-${i.project}-plan-sa")
+    account_id   = lower(replace("tfe-plan-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
   } if i.split_run_phase])
@@ -85,9 +93,9 @@ locals {
 resource "google_service_account" "apply" {
   for_each = local.apply_service_accounts
 
-  account_id   = each.value["name"]
-  display_name = each.value["name"]
-  description  = "Apply phase Service Account for Terraform Cloud - Organization: ${each.value["organization"]}, Project: ${each.value["project"]}"
+  account_id   = each.value["account_id"]  # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = each.value["account_id"]  # Must be at most 30 characters long.
+  description  = each.value["description"] # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
@@ -118,9 +126,9 @@ resource "google_project_iam_member" "apply" {
 resource "google_service_account" "plan" {
   for_each = local.plan_service_accounts
 
-  account_id   = each.value["name"]
-  display_name = each.value["name"]
-  description  = "Plan phase Service Account for Terraform Cloud - Organization: ${each.value["organization"]}, Project: ${each.value["project"]}"
+  account_id   = each.value["account_id"]  # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long. 
+  display_name = each.value["account_id"]  # Must be at most 30 characters long.
+  description  = each.value["description"] # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }

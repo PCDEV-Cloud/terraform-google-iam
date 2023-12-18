@@ -27,9 +27,4 @@ variable "access_configuration" {
     condition     = length([for i in var.access_configuration : merge(i, { split_run_phase = null })]) == length(distinct([for i in var.access_configuration : merge(i, { split_run_phase = null })]))
     error_message = "All list items must be unique. The 'split_run_phase' value is not included in the argument when checked."
   }
-
-  validation {
-    condition     = alltrue(flatten([for i in var.access_configuration : [for j in i.workspaces : length(j) <= 28]]))
-    error_message = "Workspace name cannot be longer than 28 characters."
-  }
 }
