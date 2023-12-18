@@ -30,7 +30,7 @@ resource "google_iam_workload_identity_pool" "this" {
 locals {
   list_of_providers = flatten([for i in var.access_configuration : [for j in i.workspaces : {
     id           = lower(replace("tfe-${j}", "/[\\s_]/", "-"))
-    description  = "TFE Workspace='${i.workspace}', Project='${i.project}', Organization='${i.organization}'"
+    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
     workspace    = j
