@@ -54,10 +54,9 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   }
 
   attribute_mapping = {
-    "google.subject"                  = "assertion.sub"
+    "google.subject"                  = "assertion.terraform_workspace_name"
     "attribute.tfe_organization_name" = "assertion.terraform_organization_name"
     "attribute.tfe_project_name"      = "assertion.terraform_project_name"
-    "attribute.tfe_workspace_name"    = "assertion.terraform_workspace_name"
   }
 
   attribute_condition = "'organization:${each.value["organization"]}:project:${each.value["project"]}:workspace:${each.value["workspace"]}' in assertion.sub"
