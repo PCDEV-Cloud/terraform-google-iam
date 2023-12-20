@@ -59,7 +59,7 @@ resource "google_iam_workload_identity_pool_provider" "this" {
     "attribute.tfe_project_name"      = "assertion.terraform_project_name"
   }
 
-  attribute_condition = "'organization:${each.value["organization"]}:project:${each.value["project"]}:workspace:${each.value["workspace"]}' in assertion.sub"
+  attribute_condition = "attribute.tfe_organization_name == '${each.value["organization"]}' && attribute.tfe_project_name == '${each.value["project"]}' && attribute.tfe_workspace_name == '${each.value["workspace"]}'"
 
   depends_on = [
     google_iam_workload_identity_pool.this
