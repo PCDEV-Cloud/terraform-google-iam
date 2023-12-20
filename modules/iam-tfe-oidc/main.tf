@@ -71,22 +71,38 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 ################################################################################
 
 locals {
-  list_of_apply_service_accounts = flatten([for i in var.access_configuration : {
-    account_id   = lower(replace("tfe-apply-${i.organization}-${i.project}", "/[\\s_]/", "-"))
-    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
+  # list_of_apply_service_accounts = flatten([for i in var.access_configuration : {
+  #   account_id   = lower(replace("tfe-apply-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+  #   description  = "TFE Project='${i.project}', Organization='${i.organization}'"
+  #   organization = i.organization
+  #   project      = i.project
+  # }])
+
+  list_of_apply_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
+    account_id   = lower(replace("tfe-apply-${j}", "/[\\s_]/", "-"))
+    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
-  }])
+    workspace    = j
+  }]])
 
-  list_of_plan_service_accounts = flatten([for i in var.access_configuration : {
-    account_id   = lower(replace("tfe-plan-${i.organization}-${i.project}", "/[\\s_]/", "-"))
-    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
+  # list_of_plan_service_accounts = flatten([for i in var.access_configuration : {
+  #   account_id   = lower(replace("tfe-plan-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+  #   description  = "TFE Project='${i.project}', Organization='${i.organization}'"
+  #   organization = i.organization
+  #   project      = i.project
+  # } if i.split_run_phase])
+
+  list_of_plan_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
+    account_id   = lower(replace("tfe-plan-${j}", "/[\\s_]/", "-"))
+    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
-  } if i.split_run_phase])
+    workspace    = j
+  }] if i.split_run_phase])
 
-  apply_service_accounts = { for i in local.list_of_apply_service_accounts : "${i.organization}/${i.project}" => i }
-  plan_service_accounts  = { for i in local.list_of_plan_service_accounts : "${i.organization}/${i.project}" => i }
+  apply_service_accounts = { for i in local.list_of_apply_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
+  plan_service_accounts  = { for i in local.list_of_plan_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
 }
 
 resource "google_service_account" "apply" {
@@ -104,7 +120,7 @@ resource "google_service_account_iam_binding" "apply" {
 
   service_account_id = google_service_account.apply[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].name}/subject/sub"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].name}/subject/${each.value["workspace"]}"]
 }
 
 resource "google_project_iam_member" "apply" {
@@ -137,7 +153,7 @@ resource "google_service_account_iam_binding" "plan" {
 
   service_account_id = google_service_account.plan[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].name}/subject/sub"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].name}/subject/${each.value["workspace"]}"]
 }
 
 resource "google_project_iam_member" "plan" {
