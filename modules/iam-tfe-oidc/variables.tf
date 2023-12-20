@@ -1,6 +1,11 @@
 variable "project" {
   type        = string
-  description = "Google Project's ID where provider to be created."
+  description = "Google Project's ID (without `projects/` prefix) where provider to be created."
+
+  validation {
+    condition     = !startswith(var.project, "projects/")
+    error_message = "The project ID must be provided without the `projects/` prefix."
+  }
 }
 
 variable "issuer_url" {
