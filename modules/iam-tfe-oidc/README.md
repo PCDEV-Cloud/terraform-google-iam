@@ -22,10 +22,7 @@ module "iam-tfe-oidc" {
 ```
 
 > [!IMPORTANT]
-> An `account_id` for each service account is created in the format: "tfe-apply-\<ORGANIZATION>-\<PROJECT>" or "tfe-plan-\<ORGANIZATION>-\<PROJECT>" and the length must be between 6 and 30 characters so `organization` and `project` values must be at most 19 characters long IN TOTAL.
-
-> [!IMPORTANT]
-> An `workload_identity_pool_provider_id` for each provider is created in the format: "tfe-\<WORKSPACE>" and the length must be between 4 and 32 characters so each value in `workspace` must be at most 28 characters long.
+> An `account_id` for each service account is created in the format: `tfe-apply-{{workspace}}` or `tfe-plan-{{workspace}}` and the length must be between 6 and 30 characters so each value in `workspaces` must be at most 20 characters long.
 
 ## Examples
 
