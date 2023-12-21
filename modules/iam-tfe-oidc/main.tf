@@ -4,7 +4,7 @@
 
 locals {
   list_of_identity_pools = flatten([for i in var.access_configuration : {
-    id           = lower(replace("tfe-${i.organization}-${i.project}", "/[\\s_]/", "-"))
+    id           = lower(replace("tfe-${i.project}", "/[\\s_]/", "-"))
     organization = i.organization
     project      = i.project
   }])
@@ -27,7 +27,7 @@ resource "google_iam_workload_identity_pool" "this" {
 
   workload_identity_pool_id = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key].id]) : each.value["id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
   display_name              = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key].id]) : each.value["id"] # Must be at most 32 characters long.
-  description               = "TFE Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                      # Must be at most 256 characters long. (31+36+40)
+  description               = "TFE Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                         # Must be at most 256 characters long. (31+36+40)
   disabled                  = false
   project                   = var.project
 }
@@ -61,8 +61,8 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
   workload_identity_pool_id          = google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].workload_identity_pool_id
-  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]              # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]              # Must be at most 32 characters long.
+  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]           # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]           # Must be at most 32 characters long.
   description                        = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (45+90+36+40)
   disabled                           = false
   project                            = var.project
@@ -85,50 +85,36 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 }
 
 ################################################################################
-# Service Accounts
+# Service Accounts - Apply Run Phase
 ################################################################################
 
 locals {
-  # list_of_apply_service_accounts = flatten([for i in var.access_configuration : {
-  #   account_id   = lower(replace("tfe-apply-${i.organization}-${i.project}", "/[\\s_]/", "-"))
-  #   description  = "TFE Project='${i.project}', Organization='${i.organization}'"
-  #   organization = i.organization
-  #   project      = i.project
-  # }])
-
   list_of_apply_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
     account_id   = lower(replace("tfe-apply-${j}", "/[\\s_]/", "-"))
-    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
     workspace    = j
   }]])
 
-  # list_of_plan_service_accounts = flatten([for i in var.access_configuration : {
-  #   account_id   = lower(replace("tfe-plan-${i.organization}-${i.project}", "/[\\s_]/", "-"))
-  #   description  = "TFE Project='${i.project}', Organization='${i.organization}'"
-  #   organization = i.organization
-  #   project      = i.project
-  # } if i.split_run_phase])
-
-  list_of_plan_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-    account_id   = lower(replace("tfe-plan-${j}", "/[\\s_]/", "-"))
-    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
-    organization = i.organization
-    project      = i.project
-    workspace    = j
-  }] if i.split_run_phase])
-
   apply_service_accounts = { for i in local.list_of_apply_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
-  plan_service_accounts  = { for i in local.list_of_plan_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
+}
+
+resource "random_string" "apply_service_account_id" {
+  for_each = var.randomize_service_account_id ? local.apply_service_accounts : tomap({})
+
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
 }
 
 resource "google_service_account" "apply" {
   for_each = local.apply_service_accounts
 
-  account_id   = each.value["account_id"]  # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
-  display_name = each.value["account_id"]  # Must be at most 30 characters long.
-  description  = each.value["description"] # Must be at most 256 characters long. (31+36+40)
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]) : each.value["account_id"] # Must be at most 30 characters long.
+  description  = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                           # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
@@ -156,12 +142,37 @@ resource "google_project_iam_member" "apply" {
   # }
 }
 
+################################################################################
+# Service Accounts - Plan Run Phase
+################################################################################
+
+locals {
+  list_of_plan_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
+    account_id   = lower(replace("tfe-plan-${j}", "/[\\s_]/", "-"))
+    organization = i.organization
+    project      = i.project
+    workspace    = j
+  }] if i.split_run_phase])
+
+  plan_service_accounts = { for i in local.list_of_plan_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
+}
+
+resource "random_string" "plan_service_account_id" {
+  for_each = var.randomize_service_account_id ? local.plan_service_accounts : tomap({})
+
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
+}
+
 resource "google_service_account" "plan" {
   for_each = local.plan_service_accounts
 
-  account_id   = each.value["account_id"]  # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long. 
-  display_name = each.value["account_id"]  # Must be at most 30 characters long.
-  description  = each.value["description"] # Must be at most 256 characters long. (31+36+40)
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.plan_service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long. 
+  display_name = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.plan_service_account_id[each.key].id]) : each.value["account_id"] # Must be at most 30 characters long.
+  description  = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                          # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
