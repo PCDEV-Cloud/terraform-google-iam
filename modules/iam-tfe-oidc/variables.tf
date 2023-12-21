@@ -33,3 +33,21 @@ variable "access_configuration" {
     error_message = "All list items must be unique. The 'split_run_phase' value is not included in the argument when checked."
   }
 }
+
+variable "randomize_identity_pool_id" {
+  type        = bool
+  default     = false
+  description = ""
+}
+
+variable "randomize_provider_id" {
+  type        = bool
+  default     = false
+  description = ""
+}
+
+variable "randomize_service_account_id" {
+  type        = bool
+  default     = false
+  description = ""
+}

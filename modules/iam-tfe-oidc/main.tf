@@ -5,7 +5,6 @@
 locals {
   list_of_identity_pools = flatten([for i in var.access_configuration : {
     id           = lower(replace("tfe-${i.organization}-${i.project}", "/[\\s_]/", "-"))
-    description  = "TFE Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
   }])
@@ -13,12 +12,22 @@ locals {
   identity_pools = { for i in local.list_of_identity_pools : "${i.organization}/${i.project}" => i }
 }
 
+resource "random_string" "identity_pool_id" {
+  for_each = var.randomize_identity_pool_id ? local.identity_pools : tomap({})
+
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
+}
+
 resource "google_iam_workload_identity_pool" "this" {
   for_each = local.identity_pools
 
-  workload_identity_pool_id = each.value["id"]          # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name              = each.value["id"]          # Must be at most 32 characters long.
-  description               = each.value["description"] # Must be at most 256 characters long. (31+36+40)
+  workload_identity_pool_id = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key]]) : each.value["id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name              = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key]]) : each.value["id"] # Must be at most 32 characters long.
+  description               = "TFE Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                      # Must be at most 256 characters long. (31+36+40)
   disabled                  = false
   project                   = var.project
 }
@@ -30,7 +39,6 @@ resource "google_iam_workload_identity_pool" "this" {
 locals {
   list_of_providers = flatten([for i in var.access_configuration : [for j in i.workspaces : {
     id           = lower(replace("tfe-${j}", "/[\\s_]/", "-"))
-    description  = "TFE Workspace='${j}', Project='${i.project}', Organization='${i.organization}'"
     organization = i.organization
     project      = i.project
     workspace    = j
@@ -39,13 +47,23 @@ locals {
   providers = { for i in local.list_of_providers : "${i.organization}/${i.project}/${i.workspace}" => i }
 }
 
+resource "random_string" "provider_id" {
+  for_each = var.randomize_provider_id ? local.providers : tomap({})
+
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
+}
+
 resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
   workload_identity_pool_id          = google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].workload_identity_pool_id
-  workload_identity_pool_provider_id = each.value["id"]          # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name                       = each.value["id"]          # Must be at most 32 characters long.
-  description                        = each.value["description"] # Must be at most 256 characters long. (45+90+36+40)
+  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key]]) : each.value["id"]              # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key]]) : each.value["id"]              # Must be at most 32 characters long.
+  description                        = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (45+90+36+40)
   disabled                           = false
   project                            = var.project
 
