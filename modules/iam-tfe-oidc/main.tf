@@ -25,8 +25,8 @@ resource "random_string" "identity_pool_id" {
 resource "google_iam_workload_identity_pool" "this" {
   for_each = local.identity_pools
 
-  workload_identity_pool_id = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key]]) : each.value["id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name              = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key]]) : each.value["id"] # Must be at most 32 characters long.
+  workload_identity_pool_id = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key].id]) : each.value["id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name              = var.randomize_identity_pool_id ? join("-", [each.value["id"], random_string.identity_pool_id[each.key].id]) : each.value["id"] # Must be at most 32 characters long.
   description               = "TFE Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                      # Must be at most 256 characters long. (31+36+40)
   disabled                  = false
   project                   = var.project
@@ -61,8 +61,8 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
   workload_identity_pool_id          = google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].workload_identity_pool_id
-  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key]]) : each.value["id"]              # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key]]) : each.value["id"]              # Must be at most 32 characters long.
+  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]              # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]              # Must be at most 32 characters long.
   description                        = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (45+90+36+40)
   disabled                           = false
   project                            = var.project
