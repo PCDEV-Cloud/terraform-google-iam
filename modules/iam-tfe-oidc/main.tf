@@ -78,10 +78,6 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   }
 
   attribute_condition = "attribute.tfe_organization_name == '${each.value["organization"]}' && attribute.tfe_project_name == '${each.value["project"]}' && google.subject == '${each.value["workspace"]}'"
-
-  depends_on = [
-    google_iam_workload_identity_pool.this
-  ]
 }
 
 ################################################################################
