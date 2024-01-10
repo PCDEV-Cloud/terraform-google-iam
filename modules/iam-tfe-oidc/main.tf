@@ -127,7 +127,7 @@ resource "google_project_iam_member" "apply" {
   for_each = local.apply_service_accounts
 
   project = var.project
-  role    = "roles/editor" # TODO: to variable
+  role    = var.apply_phase_role
   member  = google_service_account.apply[each.key].member
 
   # TODO: dynamic condition
@@ -185,7 +185,7 @@ resource "google_project_iam_member" "plan" {
   for_each = local.plan_service_accounts
 
   project = var.project
-  role    = "roles/viewer" # TODO: to variable
+  role    = var.plan_phase_role
   member  = google_service_account.plan[each.key].member
 
   # TODO: dynamic condition

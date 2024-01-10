@@ -51,3 +51,17 @@ variable "randomize_service_account_id" {
   default     = false
   description = ""
 }
+
+variable "apply_phase_role" {
+  type        = string
+  default     = "roles/owner"
+  nullable    = false
+  description = ""
+}
+
+variable "plan_phase_role" {
+  type        = string
+  default     = "roles/viewer"
+  nullable    = false
+  description = ""
+}
