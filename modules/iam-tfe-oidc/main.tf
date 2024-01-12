@@ -4,7 +4,7 @@
 
 locals {
   list_of_identity_pools = flatten([for i in var.access_configuration : {
-    id           = lower(replace("tfe-${i.project}", "/[\\s_]/", "-"))
+    id           = lower(replace("tfe-${var.randomize_identity_pool_id ? substr(i.project, 0, 22) : substr(i.project, 0, 28)}", "/[\\s_]/", "-"))
     organization = i.organization
     project      = i.project
   }])
@@ -37,11 +37,11 @@ resource "google_iam_workload_identity_pool" "this" {
 ################################################################################
 
 locals {
-  list_of_providers = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-    id           = lower(replace("tfe-${j}", "/[\\s_]/", "-"))
+  list_of_providers = flatten([for i in var.access_configuration : [for workspace in i.workspaces : {
+    id           = lower(replace("tfe-${var.randomize_provider_id ? substr(workspace, 0, 22) : substr(workspace, 0, 28)}", "/[\\s_]/", "-"))
     organization = i.organization
     project      = i.project
-    workspace    = j
+    workspace    = workspace
   }]])
 
   providers = { for i in local.list_of_providers : "${i.organization}/${i.project}/${i.workspace}" => i }
@@ -61,9 +61,9 @@ resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
   workload_identity_pool_id          = google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].workload_identity_pool_id
-  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]           # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
-  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]           # Must be at most 32 characters long.
-  description                        = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (45+90+36+40)
+  workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]                                           # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
+  display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"]                                           # Must be at most 32 characters long.
+  description                        = "OIDC Provider for Terraform Cloud - Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (45+90+36+40)
   disabled                           = false
   project                            = var.project
 
