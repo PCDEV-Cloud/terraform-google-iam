@@ -86,7 +86,8 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 
 locals {
   list_of_apply_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-    account_id   = lower(replace("tfe-apply-${j}", "/[\\s_]/", "-"))
+    account_id   = lower(replace("tfe-a-${var.randomize_service_account_id ? substr(j, 0, 18) : substr(j, 0, 24)}", "/[\\s_]/", "-"))
+    display_name = lower(replace("tfe-a-${j}", "/[\\s_]/", "-"))
     organization = i.organization
     project      = i.project
     workspace    = j
@@ -108,9 +109,9 @@ resource "random_string" "apply_service_account_id" {
 resource "google_service_account" "apply" {
   for_each = local.apply_service_accounts
 
-  account_id   = var.randomize_service_account_id ? substr(join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]), 0, 12) : substr(each.value["account_id"], 0, 20) # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
-  display_name = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]) : each.value["account_id"]                               # Must be at most 30 characters long.
-  description  = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                                         # Must be at most 256 characters long. (31+36+40)
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]) : each.value["account_id"]                           # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = each.value["display_name"]                                                                                                                                                         # Must be at most 30 characters long.
+  description  = "Service Account for Terraform Cloud - RunPhase='Apply', Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
@@ -144,7 +145,8 @@ resource "google_project_iam_member" "apply" {
 
 locals {
   list_of_plan_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-    account_id   = lower(replace("tfe-plan-${j}", "/[\\s_]/", "-"))
+    account_id   = lower(replace("tfe-p-${var.randomize_service_account_id ? substr(j, 0, 18) : substr(j, 0, 24)}", "/[\\s_]/", "-"))
+    display_name = lower(replace("tfe-p-${j}", "/[\\s_]/", "-"))
     organization = i.organization
     project      = i.project
     workspace    = j
@@ -166,9 +168,9 @@ resource "random_string" "plan_service_account_id" {
 resource "google_service_account" "plan" {
   for_each = local.plan_service_accounts
 
-  account_id   = var.randomize_service_account_id ? substr(join("-", [each.value["account_id"], random_string.plan_service_account_id[each.key].id]), 0, 13) : substr(each.value["account_id"], 0, 21) # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long. 
-  display_name = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.plan_service_account_id[each.key].id]) : each.value["account_id"]                               # Must be at most 30 characters long.
-  description  = "TFE Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'"                                                        # Must be at most 256 characters long. (31+36+40)
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.plan_service_account_id[each.key].id]) : each.value["account_id"]                           # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long. 
+  display_name = each.value["display_name"]                                                                                                                                                        # Must be at most 30 characters long.
+  description  = "Service Account for Terraform Cloud - RunPhase='Plan', Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
