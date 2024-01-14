@@ -36,32 +36,32 @@ variable "access_configuration" {
 
 variable "randomize_identity_pool_id" {
   type        = bool
-  default     = false
-  description = ""
+  default     = true
+  description = "Whether to add a random string at the end of the Workload Identity Pool ID."
 }
 
 variable "randomize_provider_id" {
   type        = bool
-  default     = false
-  description = ""
+  default     = true
+  description = "Whether to add a random string at the end of the Identity Provider ID."
 }
 
 variable "randomize_service_account_id" {
   type        = bool
-  default     = false
-  description = ""
+  default     = true
+  description = "Whether to add a random string at the end of the Service Account ID."
 }
 
 variable "apply_phase_role" {
   type        = string
   default     = "roles/owner"
   nullable    = false
-  description = ""
+  description = "Default role for Service Account for the apply run phase. If `split_run_phase = false` this will be the default role for the Service Account for all run phases."
 }
 
 variable "plan_phase_role" {
   type        = string
   default     = "roles/viewer"
   nullable    = false
-  description = ""
+  description = "Default role for Service Account for the plan run phase if `split_run_phase = true`."
 }

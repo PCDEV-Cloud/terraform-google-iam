@@ -130,13 +130,6 @@ resource "google_project_iam_member" "apply" {
   project = var.project
   role    = var.apply_phase_role
   member  = google_service_account.apply[each.key].member
-
-  # TODO: dynamic condition
-  # condition {
-  #   title       = ""
-  #   description = ""
-  #   expression  = ""
-  # }
 }
 
 ################################################################################
@@ -189,11 +182,4 @@ resource "google_project_iam_member" "plan" {
   project = var.project
   role    = var.plan_phase_role
   member  = google_service_account.plan[each.key].member
-
-  # TODO: dynamic condition
-  # condition {
-  #   title       = ""
-  #   description = ""
-  #   expression  = ""
-  # }
 }
