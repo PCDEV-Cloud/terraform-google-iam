@@ -21,9 +21,6 @@ module "iam-tfe-oidc" {
 }
 ```
 
-> [!IMPORTANT]
-> An `account_id` for each service account is created in the format: `tfe-apply-{{workspace}}` or `tfe-plan-{{workspace}}` and the length must be between 6 and 30 characters so each value in `workspaces` must be at most 20 characters long.
-
 ## Examples
 
 - [iam-tfe-oidc](https://github.com/PCDEV-Cloud/terraform-google-iam/tree/main/examples/iam-tfe-oidc) - Creates OIDC provider for Terraform Cloud/Enterprise
