@@ -82,6 +82,57 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 }
 
 ################################################################################
+# Service Accounts
+################################################################################
+
+locals {
+  list_of_service_accounts = flatten([for i in var.repositories : {
+    account_id   = lower(replace("bb-${var.randomize_provider_id ? substr(i.name, 0, 21) : substr(i.name, 0, 27)}", "/[\\s_]/", "-"))
+    display_name = lower(replace("bb-${i.name}", "/[\\s_]/", "-"))
+    repository   = i.name
+    role         = "roles/editor" # TODO: to variable
+  } if length(i.environments == 0)])
+
+  service_accounts = { for i in local.list_of_service_accounts : i.repository => i }
+}
+
+resource "random_string" "service_account_id" {
+  for_each = var.randomize_service_account_id ? local.service_accounts : tomap({})
+
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
+}
+
+resource "google_service_account" "this" {
+  for_each = local.service_accounts
+
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = each.value["display_name"]                                                                                                                         # Must be at most 30 characters long.
+  description  = "Service Account for Bitbucket"                                                                                                                    # Must be at most 256 characters long. (31+36+40)
+  disabled     = false
+  project      = var.project
+}
+
+resource "google_service_account_iam_binding" "this" {
+  for_each = local.service_accounts
+
+  service_account_id = google_service_account.this[each.key].name
+  role               = "roles/iam.workloadIdentityUser"
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid]}"]
+}
+
+resource "google_project_iam_member" "environment" {
+  for_each = local.service_accounts
+
+  project = var.project
+  role    = each.value["role"]
+  member  = google_service_account.this[each.key].member
+}
+
+################################################################################
 # Service Accounts - Environment
 ################################################################################
 
@@ -110,9 +161,9 @@ resource "random_string" "environment_service_account_id" {
 resource "google_service_account" "environment" {
   for_each = local.environment_service_accounts
 
-  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
-  display_name = each.value["display_name"]                                                                                                                         # Must be at most 30 characters long.
-  description  = "Service Account for Bitbucket"                                                                                                                    # Must be at most 256 characters long. (31+36+40)
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.environment_service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = each.value["display_name"]                                                                                                                                     # Must be at most 30 characters long.
+  description  = "Service Account for Bitbucket"                                                                                                                                # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
