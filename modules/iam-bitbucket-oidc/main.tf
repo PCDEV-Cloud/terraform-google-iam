@@ -82,53 +82,53 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 }
 
 ################################################################################
-# Service Accounts - Apply Run Phase
+# Service Accounts - Environment
 ################################################################################
 
-# locals {
-#   list_of_apply_service_accounts = flatten([for i in var.access_configuration : [for j in i.workspaces : {
-#     account_id   = lower(replace("tfe-a-${var.randomize_service_account_id ? substr(j, 0, 18) : substr(j, 0, 24)}", "/[\\s_]/", "-"))
-#     display_name = lower(replace("tfe-a-${j}", "/[\\s_]/", "-"))
-#     organization = i.organization
-#     project      = i.project
-#     workspace    = j
-#   }]])
+locals {
+  list_of_environment_service_accounts = flatten([for i in var.repositories : [for j in i.environments : {
+    account_id   = lower(replace("bb-${var.randomize_service_account_id ? substr(j.name, 0, 21) : substr(j.name, 0, 27)}", "/[\\s_]/", "-"))
+    display_name = lower(replace("bb-${j.name}", "/[\\s_]/", "-"))
+    repository   = i.name
+    environment  = j.name
+    role         = j.role
+  }]])
 
-#   apply_service_accounts = { for i in local.list_of_apply_service_accounts : "${i.organization}/${i.project}/${i.workspace}" => i }
-# }
+  environment_service_accounts = { for i in local.list_of_service_accounts : "${i.repository}/${i.environment}" => i }
+}
 
-# resource "random_string" "apply_service_account_id" {
-#   for_each = var.randomize_service_account_id ? local.apply_service_accounts : tomap({})
+resource "random_string" "environment_service_account_id" {
+  for_each = var.randomize_service_account_id ? local.environment_service_accounts : tomap({})
 
-#   length  = 5
-#   numeric = true
-#   lower   = false
-#   upper   = false
-#   special = false
-# }
+  length  = 5
+  numeric = true
+  lower   = false
+  upper   = false
+  special = false
+}
 
-# resource "google_service_account" "apply" {
-#   for_each = local.apply_service_accounts
+resource "google_service_account" "environment" {
+  for_each = local.environment_service_accounts
 
-#   account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.apply_service_account_id[each.key].id]) : each.value["account_id"]                           # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
-#   display_name = each.value["display_name"]                                                                                                                                                         # Must be at most 30 characters long.
-#   description  = "Service Account for Terraform Cloud - RunPhase='Apply', Workspace='${each.value["workspace"]}', Project='${each.value["project"]}', Organization='${each.value["organization"]}'" # Must be at most 256 characters long. (31+36+40)
-#   disabled     = false
-#   project      = var.project
-# }
+  account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
+  display_name = each.value["display_name"]                                                                                                                         # Must be at most 30 characters long.
+  description  = "Service Account for Bitbucket"                                                                                                                    # Must be at most 256 characters long. (31+36+40)
+  disabled     = false
+  project      = var.project
+}
 
-# resource "google_service_account_iam_binding" "apply" {
-#   for_each = local.apply_service_accounts
+resource "google_service_account_iam_binding" "environment" {
+  for_each = local.environment_service_accounts
 
-#   service_account_id = google_service_account.apply[each.key].name
-#   role               = "roles/iam.workloadIdentityUser"
-#   members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this["${each.value["organization"]}/${each.value["project"]}"].name}/subject/${each.value["workspace"]}"]
-# }
+  service_account_id = google_service_account.environment[each.key].name
+  role               = "roles/iam.workloadIdentityUser"
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid]}"]
+}
 
-# resource "google_project_iam_member" "apply" {
-#   for_each = local.apply_service_accounts
+resource "google_project_iam_member" "environment" {
+  for_each = local.environment_service_accounts
 
-#   project = var.project
-#   role    = var.apply_phase_role
-#   member  = google_service_account.apply[each.key].member
-# }
+  project = var.project
+  role    = each.value["role"]
+  member  = google_service_account.environment[each.key].member
+}

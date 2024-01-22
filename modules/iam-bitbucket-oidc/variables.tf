@@ -26,10 +26,13 @@ variable "audience" {
 variable "repositories" {
   type = list(object(
     {
-      name              = string
-      uuid              = string
-      environment_names = optional(list(string), [])
-      environment_uuids = optional(list(string), [])
+      name = string
+      uuid = string
+      environments = optional(list(object({
+        name = string
+        uuid = string
+        role = optional(string, "role/editor")
+      })), [])
     }
   ))
   default     = []
