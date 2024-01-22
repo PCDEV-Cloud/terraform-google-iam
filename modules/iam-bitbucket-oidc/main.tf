@@ -121,7 +121,7 @@ resource "google_service_account_iam_binding" "this" {
 
   service_account_id = google_service_account.this[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid]}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}"]
 }
 
 resource "google_project_iam_member" "this" {
@@ -173,7 +173,7 @@ resource "google_service_account_iam_binding" "environment" {
 
   service_account_id = google_service_account.environment[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid]}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}"]
 }
 
 resource "google_project_iam_member" "environment" {
