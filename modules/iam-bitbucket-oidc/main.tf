@@ -124,7 +124,7 @@ resource "google_service_account_iam_binding" "this" {
   members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid]}"]
 }
 
-resource "google_project_iam_member" "environment" {
+resource "google_project_iam_member" "this" {
   for_each = local.service_accounts
 
   project = var.project
