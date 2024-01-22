@@ -94,7 +94,7 @@ locals {
     role         = j.role
   }]])
 
-  environment_service_accounts = { for i in local.list_of_service_accounts : "${i.repository}/${i.environment}" => i }
+  environment_service_accounts = { for i in local.list_of_environment_service_accounts : "${i.repository}/${i.environment}" => i }
 }
 
 resource "random_string" "environment_service_account_id" {
