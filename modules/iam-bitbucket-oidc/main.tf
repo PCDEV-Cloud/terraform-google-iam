@@ -91,7 +91,7 @@ locals {
     display_name = lower(replace("bb-${i.name}", "/[\\s_]/", "-"))
     repository   = i.name
     role         = "roles/editor" # TODO: to variable
-  } if length(i.environments == 0)])
+  }])
 
   service_accounts = { for i in local.list_of_service_accounts : i.repository => i }
 }
