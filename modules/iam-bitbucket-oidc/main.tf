@@ -3,15 +3,16 @@
 ################################################################################
 
 locals {
-  workspace_uuid = trimsuffix(trimprefix("https://api.bitbucket.org/2.0/workspaces/thesoftwarehouse/pipelines-config/identity/oidc", "https://api.bitbucket.org/2.0/workspaces/"), "/pipelines-config/identity/oidc")
+  workspace_name = trimsuffix(trimprefix(var.issuer_url, "https://api.bitbucket.org/2.0/workspaces/"), "/pipelines-config/identity/oidc")
+  workspace_uuid = trimprefix(var.audience, "ari:cloud:bitbucket::workspace/")
 
   list_of_identity_pools = [
     {
-      id = lower(replace("bb-${var.randomize_identity_pool_id ? substr(local.workspace_uuid, 0, 23) : substr(local.workspace_uuid, 0, 29)}", "/[\\s_]/", "-"))
+      id = lower(replace("bb-${var.randomize_identity_pool_id ? substr(local.workspace_name, 0, 23) : substr(local.workspace_name, 0, 29)}", "/[\\s_]/", "-"))
     }
   ]
 
-  identity_pools = { for i in local.list_of_identity_pools : local.workspace_uuid => i }
+  identity_pools = { for i in local.list_of_identity_pools : local.workspace_name => i }
 }
 
 resource "random_string" "identity_pool_id" {
@@ -61,7 +62,7 @@ resource "random_string" "provider_id" {
 resource "google_iam_workload_identity_pool_provider" "this" {
   for_each = local.providers
 
-  workload_identity_pool_id          = google_iam_workload_identity_pool.this[local.workspace_uuid].workload_identity_pool_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.this[local.workspace_name].workload_identity_pool_id
   workload_identity_pool_provider_id = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 4 characters long. Must be at most 32 characters long.
   display_name                       = var.randomize_provider_id ? join("-", [each.value["id"], random_string.provider_id[each.key].id]) : each.value["id"] # Must be at most 32 characters long.
   description                        = "Bitbucket"                                                                                                          # Must be at most 256 characters long. (45+90+36+40)
@@ -78,7 +79,7 @@ resource "google_iam_workload_identity_pool_provider" "this" {
     "attribute.workspace_uuid" = "assertion.workspaceUuid"
   }
 
-  attribute_condition = "attribute.workspace_uuid == '${local.workspace_uuid}' && google.subject == '${each.value["uuid"]}'"
+  attribute_condition = "attribute.workspace_uuid == '${local.workspace_name}' && google.subject == '${each.value["uuid"]}'"
 }
 
 ################################################################################
@@ -122,7 +123,7 @@ resource "google_service_account_iam_binding" "this" {
 
   service_account_id = google_service_account.this[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_name].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
 }
 
 resource "google_project_iam_member" "this" {
@@ -176,7 +177,7 @@ resource "google_service_account_iam_binding" "environment" {
 
   service_account_id = google_service_account.environment[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_name].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
 }
 
 resource "google_project_iam_member" "environment" {
