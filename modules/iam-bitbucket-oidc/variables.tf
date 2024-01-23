@@ -20,7 +20,7 @@ variable "issuer_url" {
 
 variable "audience" {
   type        = string
-  description = "The identity provider's client ID."
+  description = "The identity provider's audience."
 }
 
 variable "repositories" {
@@ -33,10 +33,11 @@ variable "repositories" {
         uuid = string
         role = optional(string, "role/editor")
       })), [])
+      role = optional(string, "role/editor")
     }
   ))
   default     = []
-  description = "A list of objects that define the name and UUID of the repository and optionally environments."
+  description = "A list of objects that define the name and UUID of the repository and optionally environments and roles for service accounts."
 }
 
 variable "randomize_identity_pool_id" {

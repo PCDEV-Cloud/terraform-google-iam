@@ -87,11 +87,12 @@ resource "google_iam_workload_identity_pool_provider" "this" {
 
 locals {
   list_of_service_accounts = flatten([for i in var.repositories : {
-    account_id   = lower(replace("bb-${var.randomize_provider_id ? substr(i.name, 0, 21) : substr(i.name, 0, 27)}", "/[\\s_]/", "-"))
-    display_name = lower(replace("bb-${i.name}", "/[\\s_]/", "-"))
-    repository   = i.name
-    role         = "roles/editor" # TODO: to variable
-  } if length(tolist(i.environments)) == 0 ])
+    account_id      = lower(replace("bb-${var.randomize_provider_id ? substr(i.name, 0, 21) : substr(i.name, 0, 27)}", "/[\\s_]/", "-"))
+    display_name    = lower(replace("bb-${i.name}", "/[\\s_]/", "-"))
+    repository_name = i.name
+    repository_uuid = i.uuid
+    role            = i.role
+  } if length(tolist(i.environments)) == 0])
 
   service_accounts = { for i in local.list_of_service_accounts : i.repository => i }
 }
@@ -121,7 +122,7 @@ resource "google_service_account_iam_binding" "this" {
 
   service_account_id = google_service_account.this[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
 }
 
 resource "google_project_iam_member" "this" {
@@ -138,11 +139,13 @@ resource "google_project_iam_member" "this" {
 
 locals {
   list_of_environment_service_accounts = flatten([for i in var.repositories : [for j in i.environments : {
-    account_id   = lower(replace("bb-${var.randomize_service_account_id ? substr(join("-", [i.name, j.name]), 0, 21) : substr(join("-", [i.name, j.name]), 0, 27)}", "/[\\s_]/", "-"))
-    display_name = lower(replace("bb-${j.name}", "/[\\s_]/", "-"))
-    repository   = i.name
-    environment  = j.name
-    role         = j.role
+    account_id       = lower(replace("bb-${var.randomize_service_account_id ? substr(join("-", [i.name, j.name]), 0, 21) : substr(join("-", [i.name, j.name]), 0, 27)}", "/[\\s_]/", "-"))
+    display_name     = lower(replace("bb-${j.name}", "/[\\s_]/", "-"))
+    repository_name  = i.name
+    repository_uuid  = i.uuid
+    environment_name = j.name
+    environment_uuid = j.uuid
+    role             = j.role
   }]])
 
   environment_service_accounts = { for i in local.list_of_environment_service_accounts : "${i.repository}/${i.environment}" => i }
@@ -173,7 +176,7 @@ resource "google_service_account_iam_binding" "environment" {
 
   service_account_id = google_service_account.environment[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}"]
+  members            = ["principal://iam.googleapis.com/${google_iam_workload_identity_pool.this[local.workspace_uuid].name}/attribute.workspace_uuid/${local.workspace_uuid}"]
 }
 
 resource "google_project_iam_member" "environment" {
