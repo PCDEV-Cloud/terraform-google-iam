@@ -31,9 +31,9 @@ variable "repositories" {
       environments = optional(list(object({
         name = string
         uuid = string
-        role = optional(string, "role/editor")
+        role = optional(string, "roles/editor")
       })), [])
-      role = optional(string, "role/editor")
+      role = optional(string, "roles/editor")
     }
   ))
   default     = []
