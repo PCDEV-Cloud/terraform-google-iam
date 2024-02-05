@@ -113,7 +113,7 @@ resource "google_service_account" "this" {
 
   account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
   display_name = each.value["display_name"]                                                                                                                         # Must be at most 30 characters long.
-  description  = "Service Account for Bitbucket"                                                                                                                    # Must be at most 256 characters long. (31+36+40)
+  description  = "Service Account for Bitbucket - Repository='${each.value["repository_name"]}', Workspace='${local.workspace_name}' (managed-by: Terraform)"                                                                                                                    # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
@@ -141,7 +141,7 @@ resource "google_project_iam_member" "this" {
 locals {
   list_of_environment_service_accounts = flatten([for i in var.repositories : [for j in i.environments : {
     account_id       = lower(replace("bb-${var.randomize_service_account_id ? substr(join("-", [i.name, j.name]), 0, 21) : substr(join("-", [i.name, j.name]), 0, 27)}", "/[\\s_]/", "-"))
-    display_name     = lower(replace("bb-${j.name}", "/[\\s_]/", "-"))
+    display_name     = lower(replace("bb-${i.name}-${j.name}", "/[\\s_]/", "-"))
     repository_name  = i.name
     repository_uuid  = i.uuid
     environment_name = j.name
@@ -167,7 +167,7 @@ resource "google_service_account" "environment" {
 
   account_id   = var.randomize_service_account_id ? join("-", [each.value["account_id"], random_string.environment_service_account_id[each.key].id]) : each.value["account_id"] # Can have lowercase letters, digits or hyphens (-). Must be at least 6 characters long. Must be at most 30 characters long.
   display_name = each.value["display_name"]                                                                                                                                     # Must be at most 30 characters long.
-  description  = "Service Account for Bitbucket"                                                                                                                                # Must be at most 256 characters long. (31+36+40)
+  description  = "Service Account for Bitbucket - Environment='${each.value["environment_name"]}', Repository='${each.value["repository_name"]}', Workspace='${local.workspace_name}' (managed-by: Terraform)"                                                                                                                                # Must be at most 256 characters long. (31+36+40)
   disabled     = false
   project      = var.project
 }
