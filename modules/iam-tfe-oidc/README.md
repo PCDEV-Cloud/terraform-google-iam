@@ -6,7 +6,7 @@ Terraform module which creates Workload Identity Pools, OIDC Providers and Servi
 
 ```hcl
 module "iam-tfe-oidc" {
-  source = "github.com/PCDEV-Cloud/terraform-google-iam//modules/iam-tfe-oidc"
+  source = "github.com/PCDEV-Cloud/terraform-google-iam//modules/iam-tfe-oidc?ref=v1.1.0"
 
   project = "<GOOGLE-PROJECT-HERE>"
 
